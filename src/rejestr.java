@@ -15,6 +15,7 @@ public class rejestr extends JFrame {
     private static ImagePanel bgPanel = new ImagePanel();
 
     private static JTable dataTable = new JTable();
+    private static JScrollPane scrollPane = new JScrollPane(dataTable);
     private static JPanel dataPanel = new JPanel();
     private static JButton Delete = new JButton("Usuń");
     private static JButton Back = new JButton("Powrót");
@@ -139,6 +140,7 @@ public class rejestr extends JFrame {
 
 
         frame.add(bgPanel);
+        frame.setTitle("Rejestr Łodzi");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(640, 480);
         frame.setLocationRelativeTo(null);
@@ -146,53 +148,56 @@ public class rejestr extends JFrame {
     }
 
 
-    private static void loadData() throws SQLException {
+    private static void loadData() {
         frame.remove(bgPanel);
         frame.add(dataPanel);
         frame.revalidate();
         frame.repaint();
 
-        Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/rejestr_lodzi", "root", "");
+        try{
+            Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/rejestr_lodzi", "root", "");
 
-        String sql = "select * from port";
+            String sql = "select * from port";
 
-        PreparedStatement pstmt = conn.prepareStatement(sql);
+            PreparedStatement pstmt = conn.prepareStatement(sql);
 
-        ResultSet resultSet = pstmt.executeQuery();
+            ResultSet resultSet = pstmt.executeQuery();
 
-        People.clear();
+            People.clear();
 
-        while (resultSet.next()){
-            Person person = new Person();
+            while (resultSet.next()){
+                Person person = new Person();
 
-            person.Id = resultSet.getInt("Id");
-            person.Nr_rej = resultSet.getString("Nr_rej");
-            person.Wlasciciel = resultSet.getString("Wlasciciel");
-            person.Miejsce_zacumowania = resultSet.getString("Miejsce_zacumowania");
-            person.Data = resultSet.getDate("Data");
-            person.Karta_czlonkowstwa = resultSet.getBoolean("Karta_czloknowstwa");
+                person.Id = resultSet.getInt("Id");
+                person.Nr_rej = resultSet.getString("Nr_rej");
+                person.Wlasciciel = resultSet.getString("Wlasciciel");
+                person.Miejsce_zacumowania = resultSet.getString("Miejsce_zacumowania");
+                person.Data = resultSet.getDate("Data");
+                person.Karta_czlonkowstwa = resultSet.getBoolean("Karta_czloknowstwa");
 
-            People.add(person);
+                People.add(person);
+            }
+            resultSet.close();
+            pstmt.close();
+            conn.close();
+
+
+            PersonTableModel model = new PersonTableModel(People);
+
+            dataTable.setModel(model);
+            dataTable.setRowHeight(50);
+
+
+            scrollPane.setBounds(0, 0, frame.getWidth(), frame.getHeight() - 100);
+
+            dataPanel.add(scrollPane);
+            frame.revalidate();
+            frame.repaint();
+        }catch (SQLException EX){
+            JOptionPane.showMessageDialog(null, "Wystąpił błąd podczas wczytywania danych. Sprawdź połączenie.", "Rejestracja Łodzi", JOptionPane.ERROR_MESSAGE);
         }
-        resultSet.close();
-        pstmt.close();
-        conn.close();
 
 
-        PersonTableModel model = new PersonTableModel(People);
-
-        dataTable = new JTable();
-
-        dataTable.setModel(model);
-        dataTable.setRowHeight(50);
-
-        JScrollPane scrollPane = new JScrollPane(dataTable);
-
-        scrollPane.setBounds(0, 0, frame.getWidth(), frame.getHeight() - 100);
-
-        dataPanel.add(scrollPane);
-        frame.revalidate();
-        frame.repaint();
     }
 
     private static void sendData(String rejestracja, String Wlasciciel, String MiejsceZacumowania, Date Data, Boolean KartaCzlonkowstwa){
@@ -234,7 +239,7 @@ public class rejestr extends JFrame {
                 pstmt.close();
                 conn.close();
             } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(null, "Wystąpił błąd podczas rejestracji", "Rejestracja Łodzi", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null, "Wystąpił błąd podczas rejestracji. Sprawdź połączenie.", "Rejestracja Łodzi", JOptionPane.ERROR_MESSAGE);
                 throw new RuntimeException(ex);
             }
         }else{
@@ -287,13 +292,7 @@ public class rejestr extends JFrame {
         });
 
         wyswietl.addActionListener(e -> {
-            SwingUtilities.invokeLater(() -> {
-                try {
-                    loadData();
-                } catch (SQLException ex) {
-                    throw new RuntimeException(ex);
-                }
-            });
+            SwingUtilities.invokeLater(rejestr::loadData);
         });
 
         Delete.addActionListener(e -> {
